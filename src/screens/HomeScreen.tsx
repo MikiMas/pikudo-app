@@ -25,7 +25,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [authSubmitting, setAuthSubmitting] = useState(false);
 
-  const [apiBaseUrl, setApiBaseUrl] = useState("http://10.220.186.235:3000");
+  const [apiBaseUrl, setApiBaseUrl] = useState("https://api.pikudogame.com");
   const [showSettings, setShowSettings] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<null | "create" | "join">(null);
@@ -191,7 +191,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       <LoadingOverlay
         visible={creatingRoom}
         title="Creando sala"
-        subtitle="Preparando la sala y guardando tu sesión en el dispositivo."
+        subtitle="Preparando la sala y guardando tu sesi??n en el dispositivo."
       />
       <View style={{ paddingTop: 10, alignItems: "center" }}>
         <Title
@@ -429,7 +429,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                   variant="secondary"
                   fullWidth={false}
                   onPress={() => setJoinOpen(false)}
-                  // fondo sólido de botón secundario
+                  // fondo s??lido de bot??n secundario
                   // (el componente Button ya aplica background por variant)
                 >
                   Cerrar
@@ -437,7 +437,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
               </View>
 
               <View style={{ marginTop: 12, gap: 10 }}>
-                <Label>Código</Label>
+                <Label>C??digo</Label>
                 <Input value={joinCode} onChangeText={setJoinCode} autoCapitalize="characters" autoCorrect={false} placeholder="ABC123" />
 
                 <Button
@@ -490,6 +490,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
     </Screen>
   );
 }
+
 
 
 
