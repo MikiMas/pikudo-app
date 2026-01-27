@@ -5,6 +5,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/favicon.png",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -27,6 +28,7 @@
     "android": {
       "package": "com.mikimas.pikudomobile",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/favicon.png",
         "backgroundColor": "#081611"
       },
       "permissions": [
