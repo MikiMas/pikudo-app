@@ -22,7 +22,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.pikudo.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "PIKUDO uses the camera so you can take a photo and upload it as proof for a challenge (for example, take a picture of your completed challenge and attach it to the round).",
+        "NSPhotoLibraryUsageDescription": "PIKUDO accesses your photo library so you can select a photo to upload as proof for a challenge (for example, choose an existing photo and attach it to the round).",
+        "NSPhotoLibraryAddUsageDescription": "PIKUDO saves photos and videos to your library when you tap Save (for example, download a completed challenge photo to your Camera Roll)."
       }
     },
     "android": {
@@ -43,9 +46,39 @@
         "android.permission.READ_MEDIA_AUDIO"
       ]
     },
+    "locales": {
+      "en": {
+        "ios": {
+          "NSCameraUsageDescription": "PIKUDO uses the camera so you can take a photo and upload it as proof for a challenge (for example, take a picture of your completed challenge and attach it to the round).",
+          "NSPhotoLibraryUsageDescription": "PIKUDO accesses your photo library so you can select a photo to upload as proof for a challenge (for example, choose an existing photo and attach it to the round).",
+          "NSPhotoLibraryAddUsageDescription": "PIKUDO saves photos and videos to your library when you tap Save (for example, download a completed challenge photo to your Camera Roll)."
+        }
+      },
+      "es": {
+        "ios": {
+          "NSCameraUsageDescription": "PIKUDO usa la cámara para que puedas hacer una foto y subirla como prueba de un reto (por ejemplo, hacer una foto del reto completado y adjuntarla a la ronda).",
+          "NSPhotoLibraryUsageDescription": "PIKUDO accede a tu galería para que puedas seleccionar una foto y subirla como prueba de un reto (por ejemplo, elegir una foto existente y adjuntarla a la ronda).",
+          "NSPhotoLibraryAddUsageDescription": "PIKUDO guarda fotos y vídeos en tu galería cuando pulsas Guardar (por ejemplo, descargar la foto de un reto completado al carrete)."
+        }
+      }
+    },
     "plugins": [
       "expo-video",
-      "expo-media-library",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "PIKUDO uses the camera so you can take a photo and upload it as proof for a challenge (for example, take a picture of your completed challenge and attach it to the round).",
+          "photosPermission": "PIKUDO accesses your photo library so you can select a photo to upload as proof for a challenge (for example, choose an existing photo and attach it to the round).",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "PIKUDO accesses your photo library so you can select a photo to upload as proof for a challenge (for example, choose an existing photo and attach it to the round).",
+          "savePhotosPermission": "PIKUDO saves photos and videos to your library when you tap Save (for example, download a completed challenge photo to your Camera Roll)."
+        }
+      ],
       [
         "react-native-google-mobile-ads",
         {
