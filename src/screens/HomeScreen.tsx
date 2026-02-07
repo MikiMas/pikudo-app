@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Modal, Pressable, ScrollView, StatusBar, View, useWindowDimensions } from "react-native";
-import { apiFetchJson, getDeviceId, getSessionToken, setSessionToken } from "../lib/api";
+import { DEFAULT_API_BASE_URL, apiFetchJson, getDeviceId, getSessionToken, normalizeApiBaseUrl, setSessionToken } from "../lib/api";
 import { STORAGE_API_BASE, STORAGE_LAST_ROOM, STORAGE_NICKNAME } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -25,7 +25,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [authSubmitting, setAuthSubmitting] = useState(false);
 
-  const [apiBaseUrl, setApiBaseUrl] = useState("https://api.pikudogame.com");
+  const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API_BASE_URL);
   const [showSettings, setShowSettings] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<null | "create" | "join">(null);
@@ -48,9 +48,9 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       const storedNick = await AsyncStorage.getItem(STORAGE_NICKNAME).catch(() => null);
       const deviceId = await getDeviceId();
       if (canceled) return;
-      if (typeof storedBase === "string" && storedBase.trim()) setApiBaseUrl(storedBase);
+      if (typeof storedBase === "string" && storedBase.trim()) setApiBaseUrl(normalizeApiBaseUrl(storedBase));
       if (typeof storedNick === "string" && storedNick.trim()) setNickname(storedNick.trim());
-      const baseForMe = (storedBase && storedBase.trim()) ? storedBase.trim() : apiBaseUrl.trim();
+      const baseForMe = normalizeApiBaseUrl((storedBase && storedBase.trim()) ? storedBase.trim() : apiBaseUrl);
       if (baseForMe) {
         const me = await apiFetchJson<any>(baseForMe, "/api/me", { method: "GET" });
         if (!canceled && me.ok && (me.data as any)?.player?.nickname) {
@@ -62,7 +62,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
         }
       }
       if (typeof storedRoom === "string" && storedRoom.trim() && deviceId) {
-        const base = (storedBase && storedBase.trim()) ? storedBase.trim() : apiBaseUrl.trim();
+        const base = normalizeApiBaseUrl((storedBase && storedBase.trim()) ? storedBase.trim() : apiBaseUrl);
         if (base) {
           navigation.reset({
             index: 0,
@@ -82,7 +82,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       canceled = true;
     };
     (async () => {
-      const base = apiBaseUrl.trim().replace(/\/+$/, "");
+      const base = normalizeApiBaseUrl(apiBaseUrl);
       if (!base) return;
       const me = await apiFetchJson<any>(base, "/api/me", { method: "GET" });
       if (!canceled && me.ok && (me.data as any)?.player?.nickname) {
@@ -99,7 +99,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   }, [authModalOpen, apiBaseUrl]);
 
   const joinUrl = useMemo(() => {
-    const base = apiBaseUrl.trim().replace(/\/+$/, "");
+    const base = normalizeApiBaseUrl(apiBaseUrl);
     if (!base) return "";
     const code = joinCode.trim();
     if (!isValidRoomCode(code)) return "";
@@ -107,7 +107,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   }, [apiBaseUrl, joinCode]);
 
   const ensureDeviceSession = async (nick: string): Promise<boolean> => {
-    const base = apiBaseUrl.trim().replace(/\/+$/, "");
+    const base = normalizeApiBaseUrl(apiBaseUrl);
     if (!base) {
       setError("Falta configurar el backend.");
       setShowSettings(true);
@@ -152,7 +152,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
     setError(null);
     const ok = await ensureDeviceSession(nickname);
     if (!ok) return;
-    const base = apiBaseUrl.trim().replace(/\/+$/, "");
+    const base = normalizeApiBaseUrl(apiBaseUrl);
     setCreatingRoom(true);
     setLoading(true);
     try {
@@ -444,7 +444,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                   disabled={!joinUrl || loading}
                   onPress={async () => {
                     setError(null);
-                    const base = apiBaseUrl.trim().replace(/\/+$/, "");
+                    const base = normalizeApiBaseUrl(apiBaseUrl);
                     const code = joinCode.trim();
                     const ok = await ensureDeviceSession(nickname);
                     if (!ok) {
@@ -490,6 +490,8 @@ export function HomeScreen({ navigation }: { navigation: any }) {
     </Screen>
   );
 }
+
+
 
 
 

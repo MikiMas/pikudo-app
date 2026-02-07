@@ -1,12 +1,24 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+﻿import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SESSION_KEY = "pikudo:st";
 const DEVICE_KEY = "pikudo:deviceId";
+
+const NON_PIKUDO_API_SCOPES = new Set(["sumo", "paypal", "telegram", "admin"]);
+
+export const DEFAULT_API_BASE_URL = (
+  process.env.EXPO_PUBLIC_API_URL ?? "https://api.pikudogame.com"
+).trim();
 
 function createDeviceId(): string {
   const rand = Math.random().toString(36).slice(2, 10);
   const ts = Date.now().toString(36);
   return `dev_${ts}_${rand}`;
+}
+
+export function normalizeApiBaseUrl(baseUrl?: string | null): string {
+  const raw = (baseUrl ?? "").trim();
+  const fallback = DEFAULT_API_BASE_URL;
+  return (raw || fallback).replace(/\/+$/, "");
 }
 
 export async function getDeviceId(): Promise<string> {
@@ -52,29 +64,147 @@ export async function clearSessionToken(): Promise<void> {
 export type ApiOk<T> = { ok: true } & T;
 export type ApiErr = { ok: false; error: string };
 
+function normalizeApiPath(path: string): string {
+  const trimmed = path.trim();
+  if (!trimmed) return "/";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+function splitPathAndQuery(path: string): { pathname: string; query: string } {
+  const qIndex = path.indexOf("?");
+  if (qIndex < 0) return { pathname: path, query: "" };
+  return {
+    pathname: path.slice(0, qIndex),
+    query: path.slice(qIndex)
+  };
+}
+
+function toPikudoScopedPath(pathname: string): string | null {
+  if (!pathname.startsWith("/api/")) return null;
+  if (pathname.startsWith("/api/pikudo/")) return null;
+
+  const rest = pathname.slice("/api/".length);
+  const firstSegment = (rest.split("/")[0] ?? "").toLowerCase();
+  if (NON_PIKUDO_API_SCOPES.has(firstSegment)) return null;
+
+  return `/api/pikudo/${rest}`;
+}
+
+function toUnscopedPath(pathname: string): string | null {
+  if (!pathname.startsWith("/api/pikudo/")) return null;
+  const rest = pathname.slice("/api/pikudo/".length);
+  return `/api/${rest}`;
+}
+
+function unique<T>(items: T[]): T[] {
+  return [...new Set(items)];
+}
+
+function getPathCandidates(path: string): string[] {
+  const normalized = normalizeApiPath(path);
+  if (/^https?:\/\//i.test(normalized)) {
+    return [normalized];
+  }
+
+  const { pathname, query } = splitPathAndQuery(normalized);
+  const candidates: string[] = [pathname];
+
+  const scoped = toPikudoScopedPath(pathname);
+  if (scoped) {
+    candidates.push(scoped);
+  }
+
+  const unscoped = toUnscopedPath(pathname);
+  if (unscoped) {
+    candidates.push(unscoped);
+  }
+
+  return unique(candidates).map((candidate) => `${candidate}${query}`);
+}
+
+export function buildApiUrlCandidates(baseUrl: string, path: string): string[] {
+  const normalizedBase = normalizeApiBaseUrl(baseUrl);
+  return getPathCandidates(path).map((candidate) => {
+    if (/^https?:\/\//i.test(candidate)) {
+      return candidate;
+    }
+    return `${normalizedBase}${candidate}`;
+  });
+}
+
+function readApiError(json: unknown): string {
+  if (json && typeof json === "object") {
+    const maybeError = (json as { error?: unknown; message?: unknown }).error;
+    if (typeof maybeError === "string" && maybeError.trim()) {
+      return maybeError;
+    }
+
+    const maybeMessage = (json as { error?: unknown; message?: unknown }).message;
+    if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+      return maybeMessage;
+    }
+  }
+
+  return "REQUEST_FAILED";
+}
+
+async function fetchWithPathFallback<T>(
+  method: string,
+  urls: string[],
+  run: (url: string) => Promise<Response>
+): Promise<{ ok: true; data: T } | { ok: false; status: number; error: string }> {
+  for (let index = 0; index < urls.length; index += 1) {
+    const url = urls[index];
+
+    try {
+      console.log("[PIKUDO APP API]", method, url);
+      const response = await run(url);
+      console.log("[PIKUDO APP API]", response.status, url);
+
+      const json = await response.json().catch(() => null);
+      if (response.ok) {
+        return { ok: true, data: json as T };
+      }
+
+      if (response.status === 404 && index < urls.length - 1) {
+        continue;
+      }
+
+      return {
+        ok: false,
+        status: response.status,
+        error: readApiError(json)
+      };
+    } catch {
+      if (index < urls.length - 1) {
+        continue;
+      }
+      return { ok: false, status: 0, error: "NETWORK_ERROR" };
+    }
+  }
+
+  return { ok: false, status: 0, error: "NETWORK_ERROR" };
+}
+
 export async function apiFetchJson<T>(
   baseUrl: string,
   path: string,
   init?: RequestInit & { auth?: boolean }
 ): Promise<{ ok: true; data: T } | { ok: false; status: number; error: string }> {
-  const base = baseUrl.replace(/\/+$/, "");
-  const p = path.startsWith("/") ? path : `/${path}`;
-  const url = `${base}${p}`;
-  try {
-    const headers: Record<string, string> = { ...(init?.headers as any) };
-    const deviceId = await getDeviceId();
-    headers["x-device-id"] = deviceId;
-    if (init?.auth !== false) {
-      const st = await getSessionToken();
-      if (st) headers["x-session-token"] = st;
-    }
-    const res = await fetch(url, { ...init, headers });
-    const json = await res.json().catch(() => null);
-    if (!res.ok) return { ok: false, status: res.status, error: (json as any)?.error ?? "REQUEST_FAILED" };
-    return { ok: true, data: json as T };
-  } catch {
-    return { ok: false, status: 0, error: "NETWORK_ERROR" };
+  const method = (init?.method ?? "GET").toUpperCase();
+  const urls = buildApiUrlCandidates(baseUrl, path);
+
+  const headers: Record<string, string> = { ...(init?.headers as Record<string, string> | undefined) };
+  const deviceId = await getDeviceId();
+  headers["x-device-id"] = deviceId;
+
+  if (init?.auth !== false) {
+    const st = await getSessionToken();
+    if (st) headers["x-session-token"] = st;
   }
+
+  return fetchWithPathFallback<T>(method, urls, (url) => fetch(url, { ...init, headers }));
 }
 
 export async function apiFetchForm<T>(
@@ -83,23 +213,19 @@ export async function apiFetchForm<T>(
   form: FormData,
   init?: Omit<RequestInit, "body" | "headers"> & { auth?: boolean }
 ): Promise<{ ok: true; data: T } | { ok: false; status: number; error: string }> {
-  const base = baseUrl.replace(/\/+$/, "");
-  const p = path.startsWith("/") ? path : `/${path}`;
-  const url = `${base}${p}`;
+  const method = (init?.method ?? "POST").toUpperCase();
+  const urls = buildApiUrlCandidates(baseUrl, path);
 
-  try {
-    const headers: Record<string, string> = {};
-    const deviceId = await getDeviceId();
-    headers["x-device-id"] = deviceId;
-    if (init?.auth !== false) {
-      const st = await getSessionToken();
-      if (st) headers["x-session-token"] = st;
-    }
-    const res = await fetch(url, { ...init, method: init?.method ?? "POST", headers, body: form } as any);
-    const json = await res.json().catch(() => null);
-    if (!res.ok) return { ok: false, status: res.status, error: (json as any)?.error ?? "REQUEST_FAILED" };
-    return { ok: true, data: json as T };
-  } catch {
-    return { ok: false, status: 0, error: "NETWORK_ERROR" };
+  const headers: Record<string, string> = {};
+  const deviceId = await getDeviceId();
+  headers["x-device-id"] = deviceId;
+
+  if (init?.auth !== false) {
+    const st = await getSessionToken();
+    if (st) headers["x-session-token"] = st;
   }
+
+  return fetchWithPathFallback<T>(method, urls, (url) =>
+    fetch(url, { ...init, method: init?.method ?? "POST", headers, body: form } as RequestInit)
+  );
 }

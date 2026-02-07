@@ -2,7 +2,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { ActivityIndicator, Alert, Image, Modal, Pressable, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { apiFetchJson, getDeviceId, getSessionToken } from "../lib/api";
+import { apiFetchJson, buildApiUrlCandidates, getDeviceId, getSessionToken } from "../lib/api";
 import { VideoPreview } from "../components/VideoPreview";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -108,38 +108,53 @@ export function GameScreen({
   };
 
   const uploadWithProgress = async (form: FormData, onProgress: (pct: number) => void) => {
-    const base = apiBaseUrl.replace(/\/+$/, "");
-    const url = `${base}/api/upload`;
+    const urls = buildApiUrlCandidates(apiBaseUrl, "/api/upload");
     const deviceId = await getDeviceId();
     const session = await getSessionToken();
-    return await new Promise<{ ok: boolean; status: number; data: any; error?: string }>((resolve) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", url);
-      xhr.setRequestHeader("x-device-id", deviceId);
-      if (session) xhr.setRequestHeader("x-session-token", session);
-      xhr.onload = () => {
-        let json: any = null;
-        try {
-          json = JSON.parse(xhr.responseText || "null");
-        } catch {
-          json = null;
-        }
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve({ ok: true, status: xhr.status, data: json });
-        } else {
-          resolve({ ok: false, status: xhr.status, data: json, error: (json as any)?.error ?? "REQUEST_FAILED" });
-        }
-      };
-      xhr.onerror = () => resolve({ ok: false, status: 0, data: null, error: "NETWORK_ERROR" });
-      xhr.upload.onprogress = (evt) => {
-        if (!evt.lengthComputable) return;
-        const pct = Math.max(0, Math.min(100, Math.round((evt.loaded / evt.total) * 100)));
-        onProgress(pct);
-      };
-      xhr.send(form as any);
-    });
-  };
 
+    const sendTo = (url: string) =>
+      new Promise<{ ok: boolean; status: number; data: any; error?: string }>((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url);
+        xhr.setRequestHeader("x-device-id", deviceId);
+        if (session) xhr.setRequestHeader("x-session-token", session);
+        xhr.onload = () => {
+          let json: any = null;
+          try {
+            json = JSON.parse(xhr.responseText || "null");
+          } catch {
+            json = null;
+          }
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve({ ok: true, status: xhr.status, data: json });
+          } else {
+            resolve({ ok: false, status: xhr.status, data: json, error: (json as any)?.error ?? "REQUEST_FAILED" });
+          }
+        };
+        xhr.onerror = () => resolve({ ok: false, status: 0, data: null, error: "NETWORK_ERROR" });
+        xhr.upload.onprogress = (evt) => {
+          if (!evt.lengthComputable) return;
+          const pct = Math.max(0, Math.min(100, Math.round((evt.loaded / evt.total) * 100)));
+          onProgress(pct);
+        };
+        xhr.send(form as any);
+      });
+
+    for (let index = 0; index < urls.length; index += 1) {
+      const url = urls[index];
+      console.log("[PIKUDO APP API]", "POST", url);
+      const result = await sendTo(url);
+      console.log("[PIKUDO APP API]", result.status, url);
+
+      if (result.ok) return result;
+      if (result.status === 404 && index < urls.length - 1) {
+        continue;
+      }
+      return result;
+    }
+
+    return { ok: false, status: 0, data: null, error: "NETWORK_ERROR" };
+  };
   const handlePickMedia = async (challengeId: string, source: "camera" | "gallery", media: "all" | "image" | "video" = "image") => {
     setUploadErrorById((m) => ({ ...m, [challengeId]: null }));
     if (source === "camera") {
@@ -786,6 +801,8 @@ export function GameScreen({
     </View>
   );
 }
+
+
 
 
 
