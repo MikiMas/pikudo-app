@@ -23,7 +23,7 @@ export function FinalChallengesScreen({ route }: { route: any }) {
     const load = async () => {
       setLoading(true);
       setError(null);
-      const res = await apiFetchJson<ChallengesRes>(apiBaseUrl, "/api/final/challenges", { method: "GET" });
+      const res = await apiFetchJson<ChallengesRes>(apiBaseUrl, "/api/pikudo/final/challenges", { method: "GET" });
       if (canceled) return;
       setLoading(false);
       if (!res.ok) {

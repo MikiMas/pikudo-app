@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { ActivityIndicator, Alert, Image, Modal, Pressable, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -108,7 +108,7 @@ export function GameScreen({
   };
 
   const uploadWithProgress = async (form: FormData, onProgress: (pct: number) => void) => {
-    const urls = buildApiUrlCandidates(apiBaseUrl, "/api/upload");
+    const urls = buildApiUrlCandidates(apiBaseUrl, "/api/pikudo/upload");
     const deviceId = await getDeviceId();
     const session = await getSessionToken();
 
@@ -209,7 +209,7 @@ export function GameScreen({
         return;
       }
 
-      const done = await apiFetchJson<any>(apiBaseUrl, "/api/complete", {
+      const done = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/complete", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ playerChallengeId: challengeId })
@@ -223,7 +223,7 @@ export function GameScreen({
         return;
       }
 
-      const refreshed = await apiFetchJson<any>(apiBaseUrl, "/api/challenges", { method: "GET" });
+      const refreshed = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/challenges", { method: "GET" });
       if (refreshed.ok) {
         const data: any = refreshed.data as any;
         setChallenges((data?.challenges ?? []) as any);
@@ -232,7 +232,7 @@ export function GameScreen({
         if (s === "ended") setState("ended");
         else setState("running");
       }
-      const refreshedLeaders = await apiFetchJson<any>(apiBaseUrl, "/api/leaderboard", { method: "GET" });
+      const refreshedLeaders = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/leaderboard", { method: "GET" });
       if (refreshedLeaders.ok) setLeaders(((refreshedLeaders.data as any)?.leaders ?? []) as any);
     } finally {
       setUploadingById((m) => ({ ...m, [challengeId]: false }));
@@ -245,7 +245,7 @@ export function GameScreen({
     setUploadingById((m) => ({ ...m, [challengeId]: true }));
     setUploadProgress({ id: challengeId, pct: 0 });
     try {
-      const res = await apiFetchJson<any>(apiBaseUrl, "/api/challenges/delete", {
+      const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/challenges/delete", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ playerChallengeId: challengeId })
@@ -259,7 +259,7 @@ export function GameScreen({
         return;
       }
 
-      const refreshed = await apiFetchJson<any>(apiBaseUrl, "/api/challenges", { method: "GET" });
+      const refreshed = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/challenges", { method: "GET" });
       if (refreshed.ok) {
         const data: any = refreshed.data as any;
         setChallenges((data?.challenges ?? []) as any);
@@ -268,7 +268,7 @@ export function GameScreen({
         if (s === "ended") setState("ended");
         else setState("running");
       }
-      const refreshedLeaders = await apiFetchJson<any>(apiBaseUrl, "/api/leaderboard", { method: "GET" });
+      const refreshedLeaders = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/leaderboard", { method: "GET" });
       if (refreshedLeaders.ok) setLeaders(((refreshedLeaders.data as any)?.leaders ?? []) as any);
     } finally {
       setUploadingById((m) => ({ ...m, [challengeId]: false }));
@@ -282,11 +282,11 @@ export function GameScreen({
     setAdminLoading(true);
     try {
       if (action === "transfer") {
-        const res = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/leave-transfer", { method: "POST" });
+        const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/leave-transfer", { method: "POST" });
         if (!res.ok) throw new Error(res.error);
         if ((res.data as any)?.ok === false) throw new Error((res.data as any)?.error ?? "REQUEST_FAILED");
       } else {
-        const res = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/leave", { method: "POST" });
+        const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/leave", { method: "POST" });
         if (!res.ok) throw new Error(res.error);
         if ((res.data as any)?.ok === false) throw new Error((res.data as any)?.error ?? "REQUEST_FAILED");
       }
@@ -305,7 +305,7 @@ export function GameScreen({
     setAdminError(null);
     setAdminLoading(true);
     try {
-      const res = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/end", {
+      const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/end", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ code: roomCode })
@@ -365,7 +365,7 @@ export function GameScreen({
       <Card style={{ marginBottom: 2 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Muted>Ronda {currentRound} / {Math.max(totalRounds, 1)}</Muted>
-          <Muted>Próximos retos en {nextLabel}</Muted>
+          <Muted>Pr�ximos retos en {nextLabel}</Muted>
         </View>
       </Card>
 

@@ -3,8 +3,6 @@
 const SESSION_KEY = "pikudo:st";
 const DEVICE_KEY = "pikudo:deviceId";
 
-const NON_PIKUDO_API_SCOPES = new Set(["sumo", "paypal", "telegram", "admin"]);
-
 export const DEFAULT_API_BASE_URL = (
   process.env.EXPO_PUBLIC_API_URL ?? "https://api.pikudogame.com"
 ).trim();
@@ -71,56 +69,12 @@ function normalizeApiPath(path: string): string {
   return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }
 
-function splitPathAndQuery(path: string): { pathname: string; query: string } {
-  const qIndex = path.indexOf("?");
-  if (qIndex < 0) return { pathname: path, query: "" };
-  return {
-    pathname: path.slice(0, qIndex),
-    query: path.slice(qIndex)
-  };
-}
-
-function toPikudoScopedPath(pathname: string): string | null {
-  if (!pathname.startsWith("/api/")) return null;
-  if (pathname.startsWith("/api/pikudo/")) return null;
-
-  const rest = pathname.slice("/api/".length);
-  const firstSegment = (rest.split("/")[0] ?? "").toLowerCase();
-  if (NON_PIKUDO_API_SCOPES.has(firstSegment)) return null;
-
-  return `/api/pikudo/${rest}`;
-}
-
-function toUnscopedPath(pathname: string): string | null {
-  if (!pathname.startsWith("/api/pikudo/")) return null;
-  const rest = pathname.slice("/api/pikudo/".length);
-  return `/api/${rest}`;
-}
-
-function unique<T>(items: T[]): T[] {
-  return [...new Set(items)];
-}
-
 function getPathCandidates(path: string): string[] {
   const normalized = normalizeApiPath(path);
   if (/^https?:\/\//i.test(normalized)) {
     return [normalized];
   }
-
-  const { pathname, query } = splitPathAndQuery(normalized);
-  const candidates: string[] = [pathname];
-
-  const scoped = toPikudoScopedPath(pathname);
-  if (scoped) {
-    candidates.push(scoped);
-  }
-
-  const unscoped = toUnscopedPath(pathname);
-  if (unscoped) {
-    candidates.push(unscoped);
-  }
-
-  return unique(candidates).map((candidate) => `${candidate}${query}`);
+  return [normalized];
 }
 
 export function buildApiUrlCandidates(baseUrl: string, path: string): string[] {

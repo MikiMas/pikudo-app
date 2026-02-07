@@ -23,7 +23,7 @@ export function FinalPlayersScreen({ route }: { route: any }) {
     const load = async () => {
       setLoading(true);
       setError(null);
-      const res = await apiFetchJson<PlayersRes>(apiBaseUrl, "/api/final/players", { method: "GET" });
+      const res = await apiFetchJson<PlayersRes>(apiBaseUrl, "/api/pikudo/final/players", { method: "GET" });
       if (canceled) return;
       setLoading(false);
       if (!res.ok) {

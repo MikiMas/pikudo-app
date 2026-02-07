@@ -31,7 +31,7 @@ export function FinalScreen({
   const loadSummary = async () => {
     setLoading(true);
     setError(null);
-    const res = await apiFetchJson<FinalSummary>(apiBaseUrl, "/api/final/summary", { method: "GET" });
+    const res = await apiFetchJson<FinalSummary>(apiBaseUrl, "/api/pikudo/final/summary", { method: "GET" });
     setLoading(false);
     if (!res.ok) {
       setError(res.error);

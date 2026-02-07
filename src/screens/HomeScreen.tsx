@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Modal, Pressable, ScrollView, StatusBar, View, useWindowDimensions } from "react-native";
 import { DEFAULT_API_BASE_URL, apiFetchJson, getDeviceId, getSessionToken, normalizeApiBaseUrl, setSessionToken } from "../lib/api";
@@ -52,7 +52,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       if (typeof storedNick === "string" && storedNick.trim()) setNickname(storedNick.trim());
       const baseForMe = normalizeApiBaseUrl((storedBase && storedBase.trim()) ? storedBase.trim() : apiBaseUrl);
       if (baseForMe) {
-        const me = await apiFetchJson<any>(baseForMe, "/api/me", { method: "GET" });
+        const me = await apiFetchJson<any>(baseForMe, "/api/pikudo/me", { method: "GET" });
         if (!canceled && me.ok && (me.data as any)?.player?.nickname) {
           const dbNick = String((me.data as any).player.nickname || "").trim();
           if (dbNick) {
@@ -84,7 +84,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
     (async () => {
       const base = normalizeApiBaseUrl(apiBaseUrl);
       if (!base) return;
-      const me = await apiFetchJson<any>(base, "/api/me", { method: "GET" });
+      const me = await apiFetchJson<any>(base, "/api/pikudo/me", { method: "GET" });
       if (!canceled && me.ok && (me.data as any)?.player?.nickname) {
         const dbNick = String((me.data as any).player.nickname || "").trim();
         if (dbNick) {
@@ -123,7 +123,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
 
     const existing = await getSessionToken();
     const deviceId = await getDeviceId();
-    const res = await apiFetchJson<any>(base, "/api/device/register", {
+    const res = await apiFetchJson<any>(base, "/api/pikudo/device/register", {
       method: "POST",
       auth: false,
       headers: {
@@ -156,7 +156,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
     setCreatingRoom(true);
     setLoading(true);
     try {
-      const res = await apiFetchJson<any>(base, "/api/rooms/create", {
+      const res = await apiFetchJson<any>(base, "/api/pikudo/rooms/create", {
         method: "POST",
         auth: true,
         headers: { "content-type": "application/json" },
@@ -455,7 +455,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                     if (!isValidRoomCode(code)) return;
 
                     setLoading(true);
-                    const joined = await apiFetchJson<any>(base, "/api/rooms/join", {
+                    const joined = await apiFetchJson<any>(base, "/api/pikudo/rooms/join", {
                       method: "POST",
                       auth: true,
                       headers: { "content-type": "application/json" },

@@ -92,7 +92,7 @@ export function PlayerMediaScreen({ route }: { route: any }) {
       if (params.mode === "player") {
         const res = await apiFetchJson<FinalPlayerRes>(
           apiBaseUrl,
-          `/api/final/player?playerId=${encodeURIComponent(params.playerId)}`,
+          `/api/pikudo/final/player?playerId=${encodeURIComponent(params.playerId)}`,
           { method: "GET" }
         );
         if (canceled) return;
@@ -112,7 +112,7 @@ export function PlayerMediaScreen({ route }: { route: any }) {
 
       const res = await apiFetchJson<FinalChallengeRes>(
         apiBaseUrl,
-        `/api/final/challenge?challengeId=${encodeURIComponent(params.challengeId)}`,
+        `/api/pikudo/final/challenge?challengeId=${encodeURIComponent(params.challengeId)}`,
         { method: "GET" }
       );
       if (canceled) return;

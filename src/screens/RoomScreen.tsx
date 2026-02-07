@@ -1,4 +1,4 @@
-Ôªøimport { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert, Modal, Pressable, Share, StatusBar, Text, View } from "react-native";
 import { apiFetchJson, clearSessionToken } from "../lib/api";
@@ -70,7 +70,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
     setExiting(true);
     try {
       if (action === "close") {
-        const res = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/close", {
+        const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/close", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ code: roomCode })
@@ -78,7 +78,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
         if (!res.ok) throw new Error(res.error);
         if ((res.data as any)?.ok === false) throw new Error((res.data as any)?.error ?? "REQUEST_FAILED");
       } else if (action === "end") {
-        const res = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/end", {
+        const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/end", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ code: roomCode })
@@ -89,7 +89,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
         setState("ended");
         return;
       } else {
-        const res = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/leave", { method: "POST" });
+        const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/leave", { method: "POST" });
         if (!res.ok) throw new Error(res.error);
         if ((res.data as any)?.ok === false) throw new Error((res.data as any)?.error ?? "REQUEST_FAILED");
       }
@@ -124,7 +124,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
     setRefreshing(true);
     setError(null);
     try {
-      const me = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/me", { method: "GET" });
+      const me = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/me", { method: "GET" });
       if (me.ok && (me.data as any)?.ok !== false) {
         setRole(((me.data as any)?.role ?? "member") === "owner" ? "owner" : "member");
         const nextPlayer = (me.data as any)?.player ?? null;
@@ -134,7 +134,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
         return;
       }
 
-      const info = await apiFetchJson<any>(apiBaseUrl, `/api/rooms/info?code=${encodeURIComponent(roomCode)}`, { method: "GET" });
+      const info = await apiFetchJson<any>(apiBaseUrl, `/api/pikudo/rooms/info?code=${encodeURIComponent(roomCode)}`, { method: "GET" });
       if (info.ok && (info.data as any)?.ok !== false) {
         const roomStatus = String((info.data as any)?.room?.status ?? "").toLowerCase();
         if (roomStatus === "ended") {
@@ -155,7 +155,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
         await handleMissingRoom();
         return;
       }
-      const ps = await apiFetchJson<any>(apiBaseUrl, `/api/rooms/players?code=${encodeURIComponent(roomCode)}`, { method: "GET", auth: false });
+      const ps = await apiFetchJson<any>(apiBaseUrl, `/api/pikudo/rooms/players?code=${encodeURIComponent(roomCode)}`, { method: "GET", auth: false });
       if (ps.ok && (ps.data as any)?.ok !== false) {
         setPlayers(((ps.data as any)?.players ?? []) as any);
       } else if (!ps.ok && (ps as any).status && (((ps as any).status === 401) || ((ps as any).status === 404))) {
@@ -163,7 +163,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
         return;
       }
 
-      const ch = await apiFetchJson<any>(apiBaseUrl, "/api/challenges", { method: "GET" });
+      const ch = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/challenges", { method: "GET" });
       if (!ch.ok) throw new Error(ch.error);
       const data: any = ch.data as any;
       if (data?.ok === false) throw new Error(data?.error ?? "REQUEST_FAILED");
@@ -179,7 +179,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
       setNextBlockInSec(Number(data?.nextBlockInSec ?? 0) || 0);
       setChallenges((data?.challenges ?? []) as any);
 
-      const lb = await apiFetchJson<any>(apiBaseUrl, "/api/leaderboard", { method: "GET" });
+      const lb = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/leaderboard", { method: "GET" });
       if (lb.ok && (lb.data as any)?.ok !== false) setLeaders(((lb.data as any)?.leaders ?? []) as any);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "REQUEST_FAILED";
@@ -193,7 +193,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
     let canceled = false;
     setError(null);
     const loadInfo = async () => {
-      const res = await apiFetchJson<any>(apiBaseUrl, `/api/rooms/info?code=${encodeURIComponent(roomCode)}`, {
+      const res = await apiFetchJson<any>(apiBaseUrl, `/api/pikudo/rooms/info?code=${encodeURIComponent(roomCode)}`, {
         method: "GET"
       });
       if (canceled) return;
@@ -232,7 +232,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
     };
 
     const loadMe = async () => {
-      const res = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/me", { method: "GET" });
+      const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/me", { method: "GET" });
       if (canceled) return;
       if (!res.ok) {
         if ((res as any).status && (((res as any).status === 401) || ((res as any).status === 404))) {
@@ -247,7 +247,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
     };
 
     const loadPlayers = async () => {
-      const res = await apiFetchJson<any>(apiBaseUrl, `/api/rooms/players?code=${encodeURIComponent(roomCode)}`, {
+      const res = await apiFetchJson<any>(apiBaseUrl, `/api/pikudo/rooms/players?code=${encodeURIComponent(roomCode)}`, {
         method: "GET",
         auth: false
       });
@@ -263,7 +263,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
     };
 
     const loadOwner = async () => {
-      const res = await apiFetchJson<any>(apiBaseUrl, `/api/rooms/owner?code=${encodeURIComponent(roomCode)}`, {
+      const res = await apiFetchJson<any>(apiBaseUrl, `/api/pikudo/rooms/owner?code=${encodeURIComponent(roomCode)}`, {
         method: "GET",
         auth: false
       });
@@ -280,7 +280,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
     };
 
     const loadChallenges = async () => {
-      const res = await apiFetchJson<any>(apiBaseUrl, "/api/challenges", { method: "GET" });
+      const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/challenges", { method: "GET" });
       if (canceled) return;
       if (!res.ok) {
         if (res.status === 401) {
@@ -305,7 +305,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
     };
 
     const loadLeaders = async () => {
-      const res = await apiFetchJson<any>(apiBaseUrl, "/api/leaderboard", { method: "GET" });
+      const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/leaderboard", { method: "GET" });
       if (canceled) return;
       if (!res.ok) return;
       const data: any = res.data as any;
@@ -392,7 +392,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
   const handleStart = async () => {
     setError(null);
     if (Number.isFinite(draftRounds) && draftRounds >= 1 && draftRounds <= 10) {
-      const rr = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/rounds", {
+      const rr = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/rounds", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ code: roomCode, rounds: draftRounds })
@@ -407,7 +407,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
       }
     }
 
-    const res = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/start", {
+    const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/start", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ code: roomCode })
@@ -440,7 +440,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
     setAllowExit(true);
     await clearSessionToken();
     await AsyncStorage.removeItem(STORAGE_LAST_ROOM).catch(() => {});
-    const res = await apiFetchJson<any>(apiBaseUrl, "/api/rooms/leave", { method: "POST" });
+    const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/leave", { method: "POST" });
     if (!res.ok) throw new Error(res.error);
     if ((res.data as any)?.ok === false) throw new Error((res.data as any)?.error ?? "REQUEST_FAILED");
   };
@@ -453,7 +453,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
           if (finalLeaveRequested) return;
           setFinalLeaveRequested(true);
           try {
-            await apiFetchJson<any>(apiBaseUrl, "/api/rooms/leave", { method: "POST" });
+            await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/leave", { method: "POST" });
           } catch {
             // ignore
           }
@@ -548,7 +548,7 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
                 Iniciar la partida ahora?
               </Muted>
               <Muted style={{ marginTop: 6 }}>
-                Todos los jugadores pasar√°n al juego y empezar√° la primera ronda.
+                Todos los jugadores pasar·n al juego y empezar· la primera ronda.
               </Muted>
               {startError ? (
                 <Muted style={{ marginTop: 10, color: theme.colors.danger }}>
