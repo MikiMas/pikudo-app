@@ -1,6 +1,7 @@
 ﻿import { useState } from "react";
 import { Modal, Pressable, Share, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { normalizeErrorMessage } from "../lib/errorModal";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Pill } from "../ui/Pill";
@@ -28,7 +29,7 @@ export function WaitingMemberScreen({
     <>
       <Card>
         <View style={{ alignItems: "center", gap: 6 }}>
-          <Muted style={{ color: theme.colors.muted }}>Codigo de sala</Muted>
+          <Muted style={{ color: theme.colors.muted }}>Código de sala</Muted>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Title style={{ fontSize: 44, letterSpacing: 4 }}>{roomCode}</Title>
             <Pressable
@@ -185,7 +186,7 @@ export function WaitingMemberScreen({
                 Saldras de la sala, pero tus fotos y puntos se mantendran para el final.
               </Muted>
               {leaveError ? (
-                <Muted style={{ marginTop: 10, color: theme.colors.danger }}>{leaveError}</Muted>
+                <Muted style={{ marginTop: 10, color: theme.colors.danger }}>{normalizeErrorMessage(leaveError)}</Muted>
               ) : null}
               <View style={{ marginTop: 12, gap: 10 }}>
                 <Button

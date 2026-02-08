@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert, Modal, Pressable, Share, StatusBar, Text, View } from "react-native";
 import { apiFetchJson, clearSessionToken } from "../lib/api";
+import { normalizeErrorMessage } from "../lib/errorModal";
 import { STORAGE_LAST_ROOM, STORAGE_ROUNDS } from "../lib/storage";
 import { FinalScreen } from "./FinalScreen";
 import { GameScreen } from "./GameScreen";
@@ -548,11 +549,11 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
                 Iniciar la partida ahora?
               </Muted>
               <Muted style={{ marginTop: 6 }}>
-                Todos los jugadores pasar�n al juego y empezar� la primera ronda.
+                Todos los jugadores pasarán al juego y empezarán la primera ronda.
               </Muted>
               {startError ? (
                 <Muted style={{ marginTop: 10, color: theme.colors.danger }}>
-                  {startError}
+                  {normalizeErrorMessage(startError)}
                 </Muted>
               ) : null}
               <View style={{ marginTop: 12, gap: 10 }}>
@@ -646,11 +647,11 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
               <H2>{role === "owner" ? "Cerrar sala" : "Salir de la sala"}</H2>
               <Muted style={{ marginTop: 6 }}>
                 {role === "owner"
-                  ? "Se cerrara la sala para todos los jugadores."
-                  : "Saldras de la sala, pero tus fotos y puntos se mantendran."}
+                  ? "Se cerrará la sala para todos los jugadores."
+                  : "Saldrás de la sala, pero tus fotos y puntos se mantendrán."}
               </Muted>
               {exitError ? (
-                <Muted style={{ marginTop: 10, color: theme.colors.danger }}>{exitError}</Muted>
+                <Muted style={{ marginTop: 10, color: theme.colors.danger }}>{normalizeErrorMessage(exitError)}</Muted>
               ) : null}
               <View style={{ marginTop: 12, gap: 10 }}>
                 <Button

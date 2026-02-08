@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Modal, Pressable, ScrollView, StatusBar, View, useWindowDimensions } from "react-native";
 import { DEFAULT_API_BASE_URL, apiFetchJson, getDeviceId, getSessionToken, normalizeApiBaseUrl, setSessionToken } from "../lib/api";
+import { normalizeErrorMessage } from "../lib/errorModal";
 import { STORAGE_API_BASE, STORAGE_LAST_ROOM, STORAGE_NICKNAME } from "../lib/storage";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -20,7 +21,7 @@ function isValidRoomCode(code: string) {
 export function HomeScreen({ navigation }: { navigation: any }) {
   const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const [nickname, setNickname] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [errorModalMessage, setErrorModalMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [authSubmitting, setAuthSubmitting] = useState(false);
@@ -37,8 +38,15 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   const howToPageWidth = howToModalWidth;
   const howToCardWidth = Math.max(240, howToModalWidth - 28);
   const howToCardHeight = Math.max(220, Math.min(300, Math.floor(viewportHeight * 0.30)));
-  const isTablet = Math.min(viewportWidth, viewportHeight) >= 720;
-  const allowHowToBodyScroll = !isTablet;
+
+  const showError = (value: string | null | undefined) => {
+    const message = normalizeErrorMessage(value);
+    setErrorModalMessage(message);
+  };
+
+  const clearError = () => {
+    setErrorModalMessage(null);
+  };
 
   useEffect(() => {
     let canceled = false;
@@ -109,14 +117,14 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   const ensureDeviceSession = async (nick: string): Promise<boolean> => {
     const base = normalizeApiBaseUrl(apiBaseUrl);
     if (!base) {
-      setError("Falta configurar el backend.");
+      showError("Falta configurar el backend.");
       setShowSettings(true);
       setAuthModalOpen(true);
       return false;
     }
     const normalizedNick = nick.trim();
     if (normalizedNick.length < 4) {
-      setError("El nickname debe tener entre 4 y 12 caracteres.");
+      showError("El nickname debe tener entre 4 y 12 caracteres.");
       setAuthModalOpen(true);
       return false;
     }
@@ -133,11 +141,11 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       body: JSON.stringify({ nickname: normalizedNick, deviceId })
     });
     if (!res.ok) {
-      setError(res.error);
+      showError(res.error);
       return false;
     }
     if ((res.data as any)?.ok === false) {
-      setError((res.data as any)?.error ?? "REQUEST_FAILED");
+      showError((res.data as any)?.error ?? "REQUEST_FAILED");
       return false;
     }
     const st = String((res.data as any)?.sessionToken ?? "");
@@ -149,7 +157,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
   };
 
   const runCreate = async () => {
-    setError(null);
+    clearError();
     const ok = await ensureDeviceSession(nickname);
     if (!ok) return;
     const base = normalizeApiBaseUrl(apiBaseUrl);
@@ -163,16 +171,16 @@ export function HomeScreen({ navigation }: { navigation: any }) {
         body: JSON.stringify({ rounds: 4 })
       });
       if (!res.ok) {
-        setError(res.error);
+        showError(res.error);
         return;
       }
       if ((res.data as any)?.ok === false) {
-        setError((res.data as any)?.error ?? "REQUEST_FAILED");
+        showError((res.data as any)?.error ?? "REQUEST_FAILED");
         return;
       }
       const code = (res.data as any)?.room?.code ?? "";
       if (!code) {
-        setError("ROOM_CREATE_FAILED");
+        showError("ROOM_CREATE_FAILED");
         return;
       }
       await AsyncStorage.setItem(STORAGE_API_BASE, base).catch(() => {});
@@ -245,11 +253,9 @@ export function HomeScreen({ navigation }: { navigation: any }) {
         </View>
       </View>
 
-      {error ? <Muted style={{ marginTop: 14, color: theme.colors.danger, textAlign: "center" }}>{error}</Muted> : null}
-
       <View style={{ marginTop: 18 }}>
         <Button variant="secondary" onPress={() => setHowToOpen(true)}>
-          Como jugar
+          Cómo jugar
         </Button>
       </View>
 
@@ -259,15 +265,16 @@ export function HomeScreen({ navigation }: { navigation: any }) {
         animationType="fade"
         onRequestClose={() => setHowToOpen(false)}
       >
-        <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", padding: 16, justifyContent: "center", alignItems: "center" }}
-          onPress={() => setHowToOpen(false)}
-        >
-          <Pressable onPress={() => {}} style={{ width: howToModalWidth }}>
+        <View style={{ flex: 1, padding: 16, justifyContent: "center", alignItems: "center" }}>
+          <Pressable
+            style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.55)" }}
+            onPress={() => setHowToOpen(false)}
+          />
+          <View style={{ width: howToModalWidth, maxHeight: Math.max(340, viewportHeight - 32) }}>
             <Card style={{ backgroundColor: theme.colors.card, borderColor: "rgba(0,0,0,0.25)", padding: 0 }}>
               <View style={{ padding: 14, paddingBottom: 8 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <H2>Como jugar</H2>
+                  <H2>Cómo jugar</H2>
                   <Button variant="secondary" fullWidth={false} onPress={() => setHowToOpen(false)}>
                     Cerrar
                   </Button>
@@ -277,6 +284,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
 
               <ScrollView
                 horizontal
+                nestedScrollEnabled
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
                 snapToInterval={howToPageWidth}
@@ -287,18 +295,18 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                 {[
                   {
                     step: "Paso 1",
-                    title: "Crea o ?nete a una sala",
-                    text: "Crea una sala y comparte el c?digo, o ?nete con el c?digo de un amigo. Cuando est?is dentro, empieza la partida."
+                    title: "Crea o únete a una sala",
+                    text: "Crea una sala y comparte el código, o únete con el código de un amigo. Cuando estés dentro, empieza la partida."
                   },
                   {
                     step: "Paso 2",
-                    title: "Retos por rondas (foto o v?deo)",
-                    text: "En cada ronda te salen retos. Completa uno haciendo una foto o un v?deo desde la app (o eligi?ndolo de tu galer?a) y env?alo: quedar? guardado para la sala."
+                    title: "Retos por rondas (foto o vídeo)",
+                    text: "En cada ronda te salen retos. Completa uno haciendo una foto o un vídeo desde la app (o eligiéndolo de tu galería) y envíalo: quedará guardado para la sala."
                   },
                   {
                     step: "Paso 3",
-                    title: "Se env?a, se guarda y se ve al final",
-                    text: "Cada env?o suma puntos. Durante la partida ver?s el ranking y, al terminar, aparece un resumen con las mejores fotos/v?deos y los ganadores."
+                    title: "Se envía, se guarda y se ve al final",
+                    text: "Cada envío suma puntos. Durante la partida verás el ranking y, al terminar, aparece un resumen con las mejores fotos/vídeos y los ganadores."
                   }
                 ].map((s, idx) => (
                   <View key={idx} style={{ width: howToPageWidth, paddingHorizontal: 14, paddingBottom: 14, alignItems: "center" }}>
@@ -328,7 +336,6 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                         <ScrollView
                           nestedScrollEnabled
                           showsVerticalScrollIndicator={false}
-                          scrollEnabled={allowHowToBodyScroll}
                         >
                           <Muted style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{s.title}</Muted>
                           <Muted style={{ marginTop: 8 }}>{s.text}</Muted>
@@ -339,8 +346,8 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                 ))}
               </ScrollView>
             </Card>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
       <Modal transparent visible={authModalOpen} animationType="fade" onRequestClose={() => setAuthModalOpen(false)}>
         <Pressable
@@ -400,7 +407,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                       setAuthModalOpen(false);
                       setJoinOpen(true);
                       setJoinCode("");
-                      setError(null);
+                      clearError();
                       return;
                     }
                     setAuthSubmitting(true);
@@ -437,13 +444,13 @@ export function HomeScreen({ navigation }: { navigation: any }) {
               </View>
 
               <View style={{ marginTop: 12, gap: 10 }}>
-                <Label>C??digo</Label>
+                <Label>Código</Label>
                 <Input value={joinCode} onChangeText={setJoinCode} autoCapitalize="characters" autoCorrect={false} placeholder="ABC123" />
 
                 <Button
                   disabled={!joinUrl || loading}
                   onPress={async () => {
-                    setError(null);
+                    clearError();
                     const base = normalizeApiBaseUrl(apiBaseUrl);
                     const code = joinCode.trim();
                     const ok = await ensureDeviceSession(nickname);
@@ -464,12 +471,12 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                     setLoading(false);
 
                     if (!joined.ok) {
-                      setError(joined.error);
+                      showError(joined.error);
                       setJoinOpen(false);
                       return;
                     }
                     if ((joined.data as any)?.ok === false) {
-                      setError((joined.data as any)?.error ?? "REQUEST_FAILED");
+                      showError((joined.data as any)?.error ?? "REQUEST_FAILED");
                       setJoinOpen(false);
                       return;
                     }
@@ -487,9 +494,30 @@ export function HomeScreen({ navigation }: { navigation: any }) {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <Modal transparent visible={Boolean(errorModalMessage)} animationType="fade" onRequestClose={() => setErrorModalMessage(null)}>
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", padding: 16, justifyContent: "center" }}
+          onPress={() => setErrorModalMessage(null)}
+        >
+          <Pressable onPress={() => {}} style={{ width: "100%" }}>
+            <Card style={{ backgroundColor: theme.colors.card, borderColor: theme.colors.buttonPrimaryBorder }}>
+              <H2 style={{ fontSize: 20 }}>Aviso</H2>
+              <Muted style={{ marginTop: 8 }}>{errorModalMessage}</Muted>
+              <View style={{ marginTop: 14 }}>
+                <Button variant="secondary" onPress={() => setErrorModalMessage(null)}>
+                  Entendido
+                </Button>
+              </View>
+            </Card>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }
+
+
 
 
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StatusBar, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { apiFetchJson } from "../lib/api";
+import { normalizeErrorMessage } from "../lib/errorModal";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Screen } from "../ui/Screen";
@@ -66,7 +67,7 @@ export function FinalPlayersScreen({ route }: { route: any }) {
           {loading ? (
             <Muted>Cargando...</Muted>
           ) : error ? (
-            <Muted style={{ color: theme.colors.danger }}>{error}</Muted>
+            <Muted style={{ color: theme.colors.danger }}>{normalizeErrorMessage(error)}</Muted>
           ) : players.length === 0 ? (
             <Muted>No hay jugadores.</Muted>
           ) : (

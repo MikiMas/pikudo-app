@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, StatusBar, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { apiFetchJson } from "../lib/api";
+import { normalizeErrorMessage } from "../lib/errorModal";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { Screen } from "../ui/Screen";
@@ -103,7 +104,7 @@ export function FinalScreen({
               </View>
             </View>
           ) : null}
-          {error ? <Muted style={{ marginTop: 10, color: theme.colors.danger }}>{error}</Muted> : null}
+          {error ? <Muted style={{ marginTop: 10, color: theme.colors.danger }}>{normalizeErrorMessage(error)}</Muted> : null}
         </Card>
 
         <Card>
@@ -212,7 +213,7 @@ export function FinalScreen({
               </Pressable>
             </View>
             <View style={{ height: 10 }} />
-            <Muted>Saldras de la sala y se borraran tus datos locales.</Muted>
+            <Muted>Saldrás de la sala y se borraran tus datos locales.</Muted>
             <View style={{ height: 12 }} />
             <Button
               variant="danger"

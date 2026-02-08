@@ -5,6 +5,7 @@ import * as MediaLibrary from "expo-media-library";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiFetchJson } from "../lib/api";
+import { normalizeErrorMessage } from "../lib/errorModal";
 import { VideoPreview } from "../components/VideoPreview";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -207,7 +208,7 @@ export function PlayerMediaScreen({ route }: { route: any }) {
           <Button disabled={selectedIds.length === 0 || saving} onPress={saveSelected}>
             {saving ? "Guardando..." : "Guardar seleccionadas"}
           </Button>
-          {error ? <Muted style={{ marginTop: 8, color: theme.colors.danger }}>{error}</Muted> : null}
+          {error ? <Muted style={{ marginTop: 8, color: theme.colors.danger }}>{normalizeErrorMessage(error)}</Muted> : null}
         </Card>
 
         <Card>

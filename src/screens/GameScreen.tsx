@@ -1,14 +1,29 @@
 import { useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { ActivityIndicator, Alert, Image, Modal, Pressable, View } from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { apiFetchJson, buildApiUrlCandidates, getDeviceId, getSessionToken } from "../lib/api";
+import { normalizeErrorMessage } from "../lib/errorModal";
 import { VideoPreview } from "../components/VideoPreview";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { H2, Muted } from "../ui/Text";
 import { theme } from "../ui/theme";
 import type { Challenge, Leader, Player, RoomState } from "./roomTypes";
+
+type AdminConfirmAction = "end" | "transfer" | "leave";
+type AdminConfirmPayload = {
+  action: AdminConfirmAction;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  confirmVariant: "secondary" | "danger";
+};
+type UploadProgressState = {
+  id: string;
+  pct: number;
+  mode: "upload" | "delete";
+};
 
 export function GameScreen({
   apiBaseUrl,
@@ -90,10 +105,11 @@ export function GameScreen({
 
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: "image" | "video" } | null>(null);
 
-  const [uploadProgress, setUploadProgress] = useState<{ id: string; pct: number } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressState | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [adminConfirm, setAdminConfirm] = useState<AdminConfirmPayload | null>(null);
 
   const mediaTypes = (kind: "all" | "image" | "video") => {
     const ip: any = ImagePicker as any;
@@ -112,7 +128,29 @@ export function GameScreen({
     const deviceId = await getDeviceId();
     const session = await getSessionToken();
 
-    const sendTo = (url: string) =>
+    const readError = (data: any) => {
+      const fromError = typeof data?.error === "string" ? data.error.trim() : "";
+      if (fromError) return fromError;
+      const fromMessage = typeof data?.message === "string" ? data.message.trim() : "";
+      if (fromMessage) return fromMessage;
+      return "REQUEST_FAILED";
+    };
+
+    const sendToViaFetch = async (url: string) => {
+      const headers: Record<string, string> = { "x-device-id": deviceId };
+      if (session) headers["x-session-token"] = session;
+
+      try {
+        const res = await fetch(url, { method: "POST", headers, body: form as any });
+        const json = await res.json().catch(() => null);
+        if (res.ok) return { ok: true, status: res.status, data: json };
+        return { ok: false, status: res.status, data: json, error: readError(json) };
+      } catch {
+        return { ok: false, status: 0, data: null, error: "NETWORK_ERROR" };
+      }
+    };
+
+    const sendToViaXhr = (url: string) =>
       new Promise<{ ok: boolean; status: number; data: any; error?: string }>((resolve) => {
         const xhr = new XMLHttpRequest();
         xhr.open("POST", url);
@@ -128,7 +166,7 @@ export function GameScreen({
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve({ ok: true, status: xhr.status, data: json });
           } else {
-            resolve({ ok: false, status: xhr.status, data: json, error: (json as any)?.error ?? "REQUEST_FAILED" });
+            resolve({ ok: false, status: xhr.status, data: json, error: readError(json) });
           }
         };
         xhr.onerror = () => resolve({ ok: false, status: 0, data: null, error: "NETWORK_ERROR" });
@@ -143,7 +181,12 @@ export function GameScreen({
     for (let index = 0; index < urls.length; index += 1) {
       const url = urls[index];
       console.log("[PIKUDO APP API]", "POST", url);
-      const result = await sendTo(url);
+
+      let result = await sendToViaXhr(url);
+      if (result.status === 0) {
+        result = await sendToViaFetch(url);
+      }
+
       console.log("[PIKUDO APP API]", result.status, url);
 
       if (result.ok) return result;
@@ -191,14 +234,14 @@ export function GameScreen({
     const name = asset.fileName || `reto_${challengeId}.${isVideo ? "mp4" : "jpg"}`;
 
     setUploadingById((m) => ({ ...m, [challengeId]: true }));
-    setUploadProgress({ id: challengeId, pct: 0 });
+    setUploadProgress({ id: challengeId, pct: 0, mode: "upload" });
     try {
       const form = new FormData();
       form.append("playerChallengeId", challengeId);
       form.append("file", { uri: asset.uri, name, type: mime } as any);
 
       const up = await uploadWithProgress(form, (pct) => {
-        setUploadProgress({ id: challengeId, pct });
+        setUploadProgress({ id: challengeId, pct, mode: "upload" });
       });
       if (!up.ok) {
         setUploadErrorById((m) => ({ ...m, [challengeId]: up.error ?? "UPLOAD_FAILED" }));
@@ -243,7 +286,7 @@ export function GameScreen({
   const handleDeleteMedia = async (challengeId: string) => {
     setUploadErrorById((m) => ({ ...m, [challengeId]: null }));
     setUploadingById((m) => ({ ...m, [challengeId]: true }));
-    setUploadProgress({ id: challengeId, pct: 0 });
+    setUploadProgress({ id: challengeId, pct: 0, mode: "delete" });
     try {
       const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/challenges/delete", {
         method: "POST",
@@ -322,6 +365,17 @@ export function GameScreen({
     }
   };
 
+  const handleAdminConfirm = async () => {
+    if (!adminConfirm || adminLoading) return;
+    const action = adminConfirm.action;
+    setAdminConfirm(null);
+    if (action === "end") {
+      await handleAdminEnd();
+      return;
+    }
+    await handleAdminAction(action);
+  };
+
   return (
     <View style={{ gap: 10, position: "relative", paddingTop: 36 }}>
       <Pressable
@@ -359,13 +413,13 @@ export function GameScreen({
           </View>
         </View>
         {loading ? <Muted style={{ marginTop: 8 }}>Cargando sala...</Muted> : null}
-        {error ? <Muted style={{ marginTop: 8, color: theme.colors.danger }}>{error}</Muted> : null}
+        {error ? <Muted style={{ marginTop: 8, color: theme.colors.danger }}>{normalizeErrorMessage(error)}</Muted> : null}
       </Card>
 
       <Card style={{ marginBottom: 2 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Muted>Ronda {currentRound} / {Math.max(totalRounds, 1)}</Muted>
-          <Muted>Pr�ximos retos en {nextLabel}</Muted>
+          <Muted>Próximos retos en {nextLabel}</Muted>
         </View>
       </Card>
 
@@ -509,7 +563,7 @@ export function GameScreen({
                     </View>
 
                     {uploadingById[c.id] ? <Muted>Subiendo reto...</Muted> : null}
-                    {uploadErrorById[c.id] ? <Muted style={{ color: theme.colors.danger }}>{uploadErrorById[c.id]}</Muted> : null}
+                    {uploadErrorById[c.id] ? <Muted style={{ color: theme.colors.danger }}>{normalizeErrorMessage(uploadErrorById[c.id])}</Muted> : null}
                   </View>
                 ) : null}
               </Card>
@@ -593,11 +647,22 @@ export function GameScreen({
           </View>
         )}
       </Card>
-      <Modal transparent visible={adminOpen} animationType="fade" onRequestClose={() => setAdminOpen(false)}>
+      <Modal
+        transparent
+        visible={adminOpen}
+        animationType="fade"
+        onRequestClose={() => {
+          setAdminConfirm(null);
+          setAdminOpen(false);
+        }}
+      >
         <Pressable
           style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", padding: 16, justifyContent: "center" }}
           onPress={() => {
-            if (!adminLoading) setAdminOpen(false);
+            if (!adminLoading) {
+              setAdminConfirm(null);
+              setAdminOpen(false);
+            }
           }}
         >
           <Pressable onPress={() => {}}>
@@ -612,7 +677,7 @@ export function GameScreen({
               </Muted>
               {adminError ? (
                 <Muted style={{ marginTop: 10, color: theme.colors.danger }}>
-                  {adminError}
+                  {normalizeErrorMessage(adminError)}
                 </Muted>
               ) : null}
               <View style={{ marginTop: 12, gap: 10 }}>
@@ -623,21 +688,13 @@ export function GameScreen({
                         variant="secondary"
                         disabled={adminLoading}
                         onPress={() => {
-                          Alert.alert(
-                            "Finalizar partida?",
-                            "Se marcara la partida como finalizada y se ira a la sala final.",
-                            [
-                              { text: "Cancelar", style: "cancel" },
-                              {
-                                text: adminLoading ? "Finalizando..." : "Finalizar partida",
-                                style: "default",
-                                onPress: async () => {
-                                  await handleAdminEnd();
-                                }
-                              }
-                            ],
-                            { cancelable: true }
-                          );
+                          setAdminConfirm({
+                            action: "end",
+                            title: "Finalizar partida?",
+                            message: "Se marcara la partida como finalizada y se ira a la sala final.",
+                            confirmLabel: "Finalizar partida",
+                            confirmVariant: "secondary"
+                          });
                         }}
                       >
                         {adminLoading ? "Finalizando..." : "Finalizar partida"}
@@ -648,21 +705,13 @@ export function GameScreen({
                         variant="danger"
                         disabled={adminLoading}
                         onPress={() => {
-                          Alert.alert(
-                            "Salir de la partida?",
-                            "El liderazgo se asignara a otro jugador y saldras de la partida.",
-                            [
-                              { text: "Cancelar", style: "cancel" },
-                              {
-                                text: adminLoading ? "Saliendo..." : "Salir",
-                                style: "default",
-                                onPress: async () => {
-                                  await handleAdminAction("transfer");
-                                }
-                              }
-                            ],
-                            { cancelable: true }
-                          );
+                          setAdminConfirm({
+                            action: "transfer",
+                            title: "Salir de la partida?",
+                            message: "El liderazgo se asignara a otro jugador y saldras de la partida.",
+                            confirmLabel: "Salir",
+                            confirmVariant: "danger"
+                          });
                         }}
                       >
                         {adminLoading ? "Saliendo..." : "Salir de la partida"}
@@ -674,21 +723,13 @@ export function GameScreen({
                     variant="danger"
                     disabled={adminLoading}
                     onPress={() => {
-                      Alert.alert(
-                        "Salir de la partida?",
-                        "Saldras de la sala, pero tus fotos y puntos se mantendran para el final.",
-                        [
-                          { text: "Cancelar", style: "cancel" },
-                          {
-                            text: adminLoading ? "Saliendo..." : "Salir",
-                            style: "destructive",
-                            onPress: async () => {
-                              await handleAdminAction("leave");
-                            }
-                          }
-                        ],
-                        { cancelable: true }
-                      );
+                      setAdminConfirm({
+                        action: "leave",
+                        title: "Salir de la partida?",
+                        message: "Saldras de la sala, pero tus fotos y puntos se mantendran para el final.",
+                        confirmLabel: "Salir",
+                        confirmVariant: "danger"
+                      });
                     }}
                   >
                     {adminLoading ? "Saliendo..." : "Salir de la partida"}
@@ -698,10 +739,49 @@ export function GameScreen({
                   variant="primary"
                   disabled={adminLoading}
                   onPress={() => {
+                    setAdminConfirm(null);
                     setAdminOpen(false);
                   }}
                 >
                   Volver
+                </Button>
+              </View>
+            </Card>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal
+        transparent
+        visible={Boolean(adminConfirm)}
+        animationType="fade"
+        onRequestClose={() => {
+          if (!adminLoading) setAdminConfirm(null);
+        }}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", padding: 16, justifyContent: "center" }}
+          onPress={() => {
+            if (!adminLoading) setAdminConfirm(null);
+          }}
+        >
+          <Pressable onPress={() => {}}>
+            <Card>
+              <H2>{adminConfirm?.title ?? "Confirmar accion"}</H2>
+              <Muted style={{ marginTop: 6 }}>{adminConfirm?.message ?? ""}</Muted>
+              <View style={{ marginTop: 12, gap: 10 }}>
+                <Button
+                  variant={adminConfirm?.confirmVariant ?? "danger"}
+                  disabled={adminLoading || !adminConfirm}
+                  onPress={handleAdminConfirm}
+                >
+                  {adminLoading
+                    ? adminConfirm?.action === "end"
+                      ? "Finalizando..."
+                      : "Saliendo..."
+                    : adminConfirm?.confirmLabel ?? "Confirmar"}
+                </Button>
+                <Button variant="secondary" disabled={adminLoading} onPress={() => setAdminConfirm(null)}>
+                  Cancelar
                 </Button>
               </View>
             </Card>
@@ -719,12 +799,12 @@ export function GameScreen({
             onPress={() => {}}
           >
             <H2>Eliminar media</H2>
-            <Muted style={{ marginTop: 6 }}>Se borrara el archivo y se quitara el punto.</Muted>
+            <Muted style={{ marginTop: 6 }}>Se borrará el archivo y se quitará el punto.</Muted>
             <View style={{ height: 12 }} />
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   onPress={() => {
                     setConfirmDeleteId(null);
                   }}
@@ -781,26 +861,33 @@ export function GameScreen({
       <Modal transparent visible={Boolean(uploadProgress)} animationType="fade" onRequestClose={() => {}}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", padding: 18, justifyContent: "center" }}>
           <View style={{ borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: "rgba(26,28,58,0.95)", padding: 14 }}>
-            <H2>Subiendo reto</H2>
+            <H2>{uploadProgress?.mode === "delete" ? "Eliminando foto" : "Subiendo reto"}</H2>
             <View style={{ height: 12 }} />
             <ActivityIndicator color={theme.colors.text} />
             <View style={{ height: 12 }} />
-            <View style={{ height: 8, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
-              <View
-                style={{
-                  height: 8,
-                  width: `${uploadProgress?.pct ?? 0}%`,
-                  backgroundColor: theme.colors.buttonSecondary
-                }}
-              />
-            </View>
-            <Muted style={{ marginTop: 8, textAlign: "center" }}>{uploadProgress?.pct ?? 0}%</Muted>
+            {uploadProgress?.mode === "delete" ? (
+              <Muted style={{ marginTop: 2, textAlign: "center" }}>Eliminando...</Muted>
+            ) : (
+              <>
+                <View style={{ height: 8, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.12)", overflow: "hidden" }}>
+                  <View
+                    style={{
+                      height: 8,
+                      width: `${uploadProgress?.pct ?? 0}%`,
+                      backgroundColor: theme.colors.buttonSecondary
+                    }}
+                  />
+                </View>
+                <Muted style={{ marginTop: 8, textAlign: "center" }}>{uploadProgress?.pct ?? 0}%</Muted>
+              </>
+            )}
           </View>
         </View>
       </Modal>
     </View>
   );
 }
+
 
 
 

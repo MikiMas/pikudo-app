@@ -2,6 +2,7 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import * as ScreenOrientation from "expo-screen-orientation";
+import { GlobalErrorModal } from "./components/GlobalErrorModal";
 import { HomeScreen } from "./screens/HomeScreen";
 import { FinalPlayersScreen } from "./screens/FinalPlayersScreen";
 import { FinalChallengesScreen } from "./screens/FinalChallengesScreen";
@@ -29,21 +30,24 @@ export function App() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-          headerStyle: { backgroundColor: theme.colors.bg },
-          headerTintColor: theme.colors.text,
-          headerTitleStyle: { fontWeight: "900" },
-          contentStyle: { backgroundColor: theme.colors.bg }
-        }}
-      >
-        <Stack.Screen name="Home" component={HomeScreen} options={{ title: "PIKUDO" }} />
-        <Stack.Screen name="Room" component={RoomScreen} options={{ title: "Sala" }} />
-        <Stack.Screen name="PlayerMedia" component={PlayerMediaScreen} options={{ title: "Media" }} />
-        <Stack.Screen name="FinalPlayers" component={FinalPlayersScreen} options={{ title: "Jugadores" }} />
-        <Stack.Screen name="FinalChallenges" component={FinalChallengesScreen} options={{ title: "Retos" }} />
-      </Stack.Navigator>
+      <>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            headerStyle: { backgroundColor: theme.colors.bg },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: { fontWeight: "900" },
+            contentStyle: { backgroundColor: theme.colors.bg }
+          }}
+        >
+          <Stack.Screen name="Home" component={HomeScreen} options={{ title: "PIKUDO" }} />
+          <Stack.Screen name="Room" component={RoomScreen} options={{ title: "Sala" }} />
+          <Stack.Screen name="PlayerMedia" component={PlayerMediaScreen} options={{ title: "Media" }} />
+          <Stack.Screen name="FinalPlayers" component={FinalPlayersScreen} options={{ title: "Jugadores" }} />
+          <Stack.Screen name="FinalChallenges" component={FinalChallengesScreen} options={{ title: "Retos" }} />
+        </Stack.Navigator>
+        <GlobalErrorModal />
+      </>
     </NavigationContainer>
   );
 }

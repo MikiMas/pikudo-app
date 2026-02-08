@@ -32,7 +32,7 @@ export function WaitingOwnerScreen({
     <View style={{ gap: 10 }}>
       <Card>
         <View style={{ alignItems: "center", gap: 6 }}>
-          <Muted style={{ color: theme.colors.muted }}>Codigo de sala</Muted>
+          <Muted style={{ color: theme.colors.muted }}>Código de sala</Muted>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Title style={{ fontSize: 44, letterSpacing: 4 }}>{roomCode}</Title>
             <Pressable
@@ -123,7 +123,7 @@ export function WaitingOwnerScreen({
       </Card>
 
       <Card>
-        <Label>Duracion (rondas)</Label>
+        <Label>Duración (rondas)</Label>
         <View style={{ height: 8 }} />
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
           <Button variant="secondary" fullWidth={false} onPress={onDecRounds} disabled={draftRounds <= 1}>
