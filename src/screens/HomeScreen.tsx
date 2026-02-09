@@ -199,7 +199,7 @@ export function HomeScreen({ navigation }: { navigation: any }) {
       <LoadingOverlay
         visible={creatingRoom}
         title="Creando sala"
-        subtitle="Preparando la sala y guardando tu sesi??n en el dispositivo."
+        subtitle="Preparando la sala y guardando tu sesión en el dispositivo."
       />
       <View style={{ paddingTop: 10, alignItems: "center" }}>
         <Title
@@ -300,13 +300,13 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                   },
                   {
                     step: "Paso 2",
-                    title: "Retos por rondas (foto o vídeo)",
-                    text: "En cada ronda te salen retos. Completa uno haciendo una foto o un vídeo desde la app (o eligiéndolo de tu galería) y envíalo: quedará guardado para la sala."
+                    title: "Retos por rondas (fotos)",
+                    text: "En cada ronda te salen retos. Completa uno haciendo una foto desde la app (o eligiéndolo de tu galería) y envíalo: quedará guardado para la sala."
                   },
                   {
                     step: "Paso 3",
                     title: "Se envía, se guarda y se ve al final",
-                    text: "Cada envío suma puntos. Durante la partida verás el ranking y, al terminar, aparece un resumen con las mejores fotos/vídeos y los ganadores."
+                    text: "Cada envío suma puntos. Durante la partida verás el ranking y, al terminar, aparece un resumen con las mejores fotos y los ganadores."
                   }
                 ].map((s, idx) => (
                   <View key={idx} style={{ width: howToPageWidth, paddingHorizontal: 14, paddingBottom: 14, alignItems: "center" }}>
@@ -350,11 +350,12 @@ export function HomeScreen({ navigation }: { navigation: any }) {
         </View>
       </Modal>
       <Modal transparent visible={authModalOpen} animationType="fade" onRequestClose={() => setAuthModalOpen(false)}>
-        <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", padding: 16, justifyContent: "center" }}
-          onPress={() => setAuthModalOpen(false)}
-        >
-          <Pressable onPress={() => {}} style={{ width: "100%" }}>
+        <View style={{ flex: 1, padding: 16, justifyContent: "center" }}>
+          <Pressable
+            style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }}
+            onPress={() => setAuthModalOpen(false)}
+          />
+          <View style={{ width: "100%" }}>
             <Card style={{ backgroundColor: theme.colors.card, borderColor: theme.colors.buttonPrimaryBorder }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <View style={{ gap: 4 }}>
@@ -419,16 +420,17 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                 </Button>
               </View>
             </Card>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal transparent visible={joinOpen} animationType="fade" onRequestClose={() => setJoinOpen(false)}>
-        <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", padding: 16, justifyContent: "center" }}
-          onPress={() => setJoinOpen(false)}
-        >
-          <Pressable onPress={() => {}} style={{ width: "100%" }}>
+        <View style={{ flex: 1, padding: 16, justifyContent: "center" }}>
+          <Pressable
+            style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }}
+            onPress={() => setJoinOpen(false)}
+          />
+          <View style={{ width: "100%" }}>
             <Card style={{ backgroundColor: theme.colors.card, borderColor: theme.colors.buttonPrimaryBorder }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <H2>Unirme a sala</H2>
@@ -491,16 +493,17 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                 </Button>
               </View>
             </Card>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal transparent visible={Boolean(errorModalMessage)} animationType="fade" onRequestClose={() => setErrorModalMessage(null)}>
-        <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", padding: 16, justifyContent: "center" }}
-          onPress={() => setErrorModalMessage(null)}
-        >
-          <Pressable onPress={() => {}} style={{ width: "100%" }}>
+        <View style={{ flex: 1, padding: 16, justifyContent: "center" }}>
+          <Pressable
+            style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }}
+            onPress={() => setErrorModalMessage(null)}
+          />
+          <View style={{ width: "100%" }}>
             <Card style={{ backgroundColor: theme.colors.card, borderColor: theme.colors.buttonPrimaryBorder }}>
               <H2 style={{ fontSize: 20 }}>Aviso</H2>
               <Muted style={{ marginTop: 8 }}>{errorModalMessage}</Muted>
@@ -510,8 +513,8 @@ export function HomeScreen({ navigation }: { navigation: any }) {
                 </Button>
               </View>
             </Card>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </Screen>
   );

@@ -168,18 +168,20 @@ export function WaitingMemberScreen({
           if (!leaving) setLeaveOpen(false);
         }}
       >
-        <Pressable
+        <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.55)",
             padding: 16,
             justifyContent: "center"
           }}
-          onPress={() => {
-            if (!leaving) setLeaveOpen(false);
-          }}
         >
-          <Pressable onPress={() => {}} style={{ width: "100%" }}>
+          <Pressable
+            style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }}
+            onPress={() => {
+              if (!leaving) setLeaveOpen(false);
+            }}
+          />
+          <View style={{ width: "100%" }}>
             <Card>
               <H2>Abandonar partida</H2>
               <Muted style={{ marginTop: 6 }}>
@@ -192,13 +194,17 @@ export function WaitingMemberScreen({
                 <Button
                   variant="danger"
                   disabled={leaving}
-                  onPress={() => {
+                  onPress={async () => {
                     if (leaving) return;
                     setLeaveError(null);
                     setLeaving(true);
                     setLeaveOpen(false);
-                    onLeave().catch(() => {});
-                    navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+                    try {
+                      await onLeave();
+                      navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+                    } finally {
+                      setLeaving(false);
+                    }
                   }}
                 >
                   {leaving ? "Saliendo..." : "Si, salir"}
@@ -208,8 +214,8 @@ export function WaitingMemberScreen({
                 </Button>
               </View>
             </Card>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </>
   );

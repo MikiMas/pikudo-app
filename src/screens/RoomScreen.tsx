@@ -42,9 +42,12 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
   const [finalLeaveRequested, setFinalLeaveRequested] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const pollingRef = useRef(false);
+  const pollTickRef = useRef(0);
   const allowExitRef = useRef(false);
   const startedRef = useRef(false);
-  const POLL_MS = 15000;
+  const POLL_MS = 20000;
+  const LEADERS_POLL_EVERY = 3;
+  const ME_POLL_EVERY = 3;
 
   const handleMissingRoom = async () => {
     allowExitRef.current = true;
@@ -326,7 +329,11 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
       if (pollingRef.current) return;
       pollingRef.current = true;
       try {
-        const tasks: Promise<void>[] = [loadChallenges(), loadLeaders(), loadMe()];
+        pollTickRef.current += 1;
+        const tick = pollTickRef.current;
+        const tasks: Promise<void>[] = [loadChallenges()];
+        if (tick % LEADERS_POLL_EVERY === 0) tasks.push(loadLeaders());
+        if (tick % ME_POLL_EVERY === 0) tasks.push(loadMe());
         if (state === "scheduled") {
           tasks.push(loadPlayers(), loadOwner(), loadInfo());
         }
@@ -442,8 +449,8 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
     await clearSessionToken();
     await AsyncStorage.removeItem(STORAGE_LAST_ROOM).catch(() => {});
     const res = await apiFetchJson<any>(apiBaseUrl, "/api/pikudo/rooms/leave", { method: "POST" });
-    if (!res.ok) throw new Error(res.error);
-    if ((res.data as any)?.ok === false) throw new Error((res.data as any)?.error ?? "REQUEST_FAILED");
+    if (!res.ok) return;
+    if ((res.data as any)?.ok === false) return;
   };
   if (shouldShowFinal) {
     return (
@@ -531,19 +538,21 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
           if (!startLoading) setStartOpen(false);
         }}
       >
-        <Pressable
+        <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(7, 16, 33, 0.65)",
             alignItems: "center",
             justifyContent: "center",
             padding: 18
           }}
-          onPress={() => {
-            if (!startLoading) setStartOpen(false);
-          }}
         >
-          <Pressable style={{ width: "100%", maxWidth: 420 }}>
+          <Pressable
+            style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(7, 16, 33, 0.65)" }}
+            onPress={() => {
+              if (!startLoading) setStartOpen(false);
+            }}
+          />
+          <View style={{ width: "100%", maxWidth: 420 }}>
             <Card>
               <Muted style={{ color: theme.colors.text, fontWeight: "900" }}>
                 Iniciar la partida ahora?
@@ -619,8 +628,8 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
                 </Pressable>
               </View>
             </Card>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal
@@ -631,18 +640,20 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
           if (!exiting) setExitOpen(false);
         }}
       >
-        <Pressable
+        <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.55)",
             padding: 16,
             justifyContent: "center"
           }}
-          onPress={() => {
-            if (!exiting) setExitOpen(false);
-          }}
         >
-          <Pressable onPress={() => {}}>
+          <Pressable
+            style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }}
+            onPress={() => {
+              if (!exiting) setExitOpen(false);
+            }}
+          />
+          <View>
             <Card>
               <H2>{role === "owner" ? "Cerrar sala" : "Salir de la sala"}</H2>
               <Muted style={{ marginTop: 6 }}>
@@ -669,8 +680,8 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
                 </Button>
               </View>
             </Card>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </Screen>
   );

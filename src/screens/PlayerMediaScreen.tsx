@@ -42,6 +42,21 @@ const getExtension = (mime: string, url: string) => {
   return lower.startsWith("video") ? ".mp4" : ".jpg";
 };
 
+const parseSavedMap = (raw: string | null): Record<string, boolean> => {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: Record<string, boolean> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value) out[key] = true;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+};
+
 export function PlayerMediaScreen({ route }: { route: any }) {
   const params = route.params as
     | { apiBaseUrl: string; roomCode: string; mode: "player"; playerId: string; nickname: string }
@@ -58,7 +73,11 @@ export function PlayerMediaScreen({ route }: { route: any }) {
   const [savedCount, setSavedCount] = useState<number | null>(null);
 
   const scopeId = params.mode === "player" ? params.playerId : params.challengeId;
-  const savedKey = useMemo(() => {
+  const savedKeyGlobal = useMemo(() => {
+    const base = apiBaseUrl.replace(/\/+$/, "");
+    return `saved_media:${base}:${roomCode}:global`;
+  }, [apiBaseUrl, roomCode]);
+  const savedKeyLegacyScoped = useMemo(() => {
     const base = apiBaseUrl.replace(/\/+$/, "");
     return `saved_media:${base}:${roomCode}:${params.mode}:${scopeId}`;
   }, [apiBaseUrl, params.mode, roomCode, scopeId]);
@@ -66,24 +85,19 @@ export function PlayerMediaScreen({ route }: { route: any }) {
   useEffect(() => {
     let canceled = false;
     const loadSaved = async () => {
-      const raw = await AsyncStorage.getItem(savedKey).catch(() => null);
+      const [rawGlobal, rawLegacy] = await Promise.all([
+        AsyncStorage.getItem(savedKeyGlobal).catch(() => null),
+        AsyncStorage.getItem(savedKeyLegacyScoped).catch(() => null)
+      ]);
       if (canceled) return;
-      if (!raw) {
-        setSavedById({});
-        return;
-      }
-      try {
-        const parsed = JSON.parse(raw) as Record<string, boolean>;
-        setSavedById(parsed && typeof parsed === "object" ? parsed : {});
-      } catch {
-        setSavedById({});
-      }
+      const merged = { ...parseSavedMap(rawLegacy), ...parseSavedMap(rawGlobal) };
+      setSavedById(merged);
     };
     loadSaved().catch(() => {});
     return () => {
       canceled = true;
     };
-  }, [savedKey]);
+  }, [savedKeyGlobal, savedKeyLegacyScoped]);
 
   useEffect(() => {
     let canceled = false;
@@ -159,21 +173,39 @@ export function PlayerMediaScreen({ route }: { route: any }) {
       let saved = 0;
       const nextSaved = { ...savedById };
       const nextSelected = { ...selected };
+      let firstError: string | null = null;
       for (const id of selectedIds) {
         const item = items.find((c) => c.id === id);
         if (!item?.media?.url) continue;
-        const ext = getExtension(item.media.mime ?? "", item.media.url);
-        const targetFile = new FileSystem.File(FileSystem.Paths.cache, `canoo-${id}${ext}`);
-        const downloaded = await FileSystem.File.downloadFileAsync(item.media.url, targetFile);
-        await MediaLibrary.saveToLibraryAsync(downloaded.uri);
-        saved += 1;
-        nextSaved[id] = true;
-        nextSelected[id] = false;
+        try {
+          const ext = getExtension(item.media.mime ?? "", item.media.url);
+          const targetFile = new FileSystem.File(FileSystem.Paths.cache, `canoo-${id}-${Date.now()}${ext}`);
+          const downloaded = await FileSystem.File.downloadFileAsync(item.media.url, targetFile);
+          await MediaLibrary.saveToLibraryAsync(downloaded.uri);
+          saved += 1;
+          nextSaved[id] = true;
+          nextSelected[id] = false;
+        } catch (e) {
+          const raw = e instanceof Error ? e.message : "SAVE_FAILED";
+          const low = raw.toLowerCase();
+          if (low.includes("destination already exists") || low.includes("already exists")) {
+            nextSaved[id] = true;
+            nextSelected[id] = false;
+            continue;
+          }
+          if (!firstError) firstError = raw;
+        }
       }
       setSavedCount(saved);
       setSavedById(nextSaved);
       setSelected(nextSelected);
-      await AsyncStorage.setItem(savedKey, JSON.stringify(nextSaved)).catch(() => {});
+      await AsyncStorage.setItem(savedKeyGlobal, JSON.stringify(nextSaved)).catch(() => {});
+      if (savedKeyLegacyScoped !== savedKeyGlobal) {
+        await AsyncStorage.removeItem(savedKeyLegacyScoped).catch(() => {});
+      }
+      if (firstError) {
+        setError(saved > 0 ? "Algunas imagenes no se pudieron guardar." : firstError);
+      }
     } catch (e) {
       const raw = e instanceof Error ? e.message : "SAVE_FAILED";
       const msg = raw.toLowerCase().includes("destination already exists") ? "Foto ya descargada." : raw;
@@ -271,28 +303,62 @@ export function PlayerMediaScreen({ route }: { route: any }) {
                               resizeMode="contain"
                             />
                           </Pressable>
-                          {savedAlready ? <Muted>Ya guardada</Muted> : null}
                         </View>
                       </View>
                       {c.media?.url ? (
                         <View style={{ marginTop: 10 }}>
                           <Pressable disabled={savedAlready} onPress={() => toggle(c.id)}>
-                            {c.media.type === "video" ? (
-                              <VideoPreview url={c.media.url} />
-                            ) : (
-                              <Image
-                                source={{ uri: c.media.url }}
-                                style={{
-                                  width: "100%",
-                                  height: 220,
-                                  borderRadius: 12,
-                                  borderWidth: 1,
-                                  borderColor: theme.colors.border,
-                                  backgroundColor: "rgba(0,0,0,0.25)"
-                                }}
-                                resizeMode="contain"
-                              />
-                            )}
+                            <View style={{ position: "relative", borderRadius: 12, overflow: "hidden" }}>
+                              {c.media.type === "video" ? (
+                                <VideoPreview url={c.media.url} />
+                              ) : (
+                                <Image
+                                  source={{ uri: c.media.url }}
+                                  style={{
+                                    width: "100%",
+                                    height: 220,
+                                    borderRadius: 12,
+                                    borderWidth: 1,
+                                    borderColor: theme.colors.border,
+                                    backgroundColor: "rgba(0,0,0,0.25)"
+                                  }}
+                                  resizeMode="contain"
+                                />
+                              )}
+                              {savedAlready ? (
+                                <View
+                                  pointerEvents="none"
+                                  style={{
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 6,
+                                    backgroundColor: "rgba(0,0,0,0.32)",
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: "rgba(255,255,255,0.15)",
+                                    shadowColor: "#000",
+                                    shadowOpacity: 0.22,
+                                    shadowRadius: 3,
+                                    shadowOffset: { width: 0, height: 2 },
+                                    elevation: 2
+                                  }}
+                                >
+                                  <Muted
+                                    style={{
+                                      color: theme.colors.text,
+                                      fontSize: 12,
+                                      lineHeight: 16,
+                                      fontWeight: "900",
+                                      letterSpacing: 0.35
+                                    }}
+                                  >
+                                    Guardada
+                                  </Muted>
+                                </View>
+                              ) : null}
+                            </View>
                           </Pressable>
                         </View>
                       ) : null}

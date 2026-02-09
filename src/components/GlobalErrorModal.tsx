@@ -31,11 +31,12 @@ export function GlobalErrorModal() {
 
   return (
     <Modal transparent visible={Boolean(current)} animationType="fade" onRequestClose={close}>
-      <Pressable
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", padding: 16, justifyContent: "center" }}
-        onPress={close}
-      >
-        <Pressable onPress={() => {}} style={{ width: "100%" }}>
+      <View style={{ flex: 1, padding: 16, justifyContent: "center" }}>
+        <Pressable
+          style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }}
+          onPress={close}
+        />
+        <View style={{ width: "100%" }}>
           <Card style={{ backgroundColor: theme.colors.card, borderColor: theme.colors.buttonPrimaryBorder }}>
             <H2 style={{ fontSize: 20 }}>{current?.title ?? "Aviso"}</H2>
             <Muted style={{ marginTop: 8 }}>{current?.message ?? ""}</Muted>
@@ -45,8 +46,8 @@ export function GlobalErrorModal() {
               </Button>
             </View>
           </Card>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }

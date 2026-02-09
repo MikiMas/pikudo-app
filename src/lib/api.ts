@@ -103,6 +103,16 @@ function readApiError(json: unknown): string {
   return "REQUEST_FAILED";
 }
 
+function fallbackErrorByStatus(status: number): string {
+  if (status === 401) return "UNAUTHORIZED";
+  if (status === 403) return "FORBIDDEN";
+  if (status === 404) return "NOT_FOUND";
+  if (status === 413) return "FILE_TOO_LARGE";
+  if (status === 429) return "RATE_LIMITED";
+  if (status >= 500) return "INTERNAL_ERROR";
+  return "REQUEST_FAILED";
+}
+
 async function fetchWithPathFallback<T>(
   method: string,
   urls: string[],
@@ -125,10 +135,13 @@ async function fetchWithPathFallback<T>(
         continue;
       }
 
+      const parsedError = readApiError(json);
+      const error = parsedError === "REQUEST_FAILED" ? fallbackErrorByStatus(response.status) : parsedError;
+
       return {
         ok: false,
         status: response.status,
-        error: readApiError(json)
+        error
       };
     } catch {
       if (index < urls.length - 1) {

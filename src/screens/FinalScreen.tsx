@@ -180,11 +180,12 @@ export function FinalScreen({
       </View>
 
       <Modal transparent visible={leaveOpen} animationType="fade" onRequestClose={() => setLeaveOpen(false)}>
-        <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", padding: 16, justifyContent: "center" }}
-          onPress={() => setLeaveOpen(false)}
-        >
+        <View style={{ flex: 1, padding: 16, justifyContent: "center" }}>
           <Pressable
+            style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }}
+            onPress={() => setLeaveOpen(false)}
+          />
+          <View
             style={{
               borderRadius: 18,
               borderWidth: 2,
@@ -192,7 +193,6 @@ export function FinalScreen({
               backgroundColor: theme.colors.cardAlt,
               padding: 14
             }}
-            onPress={() => {}}
           >
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <H2>Abandonar partida</H2>
@@ -225,8 +225,8 @@ export function FinalScreen({
             >
               {leaving ? "Saliendo..." : "Confirmar salida"}
             </Button>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </Screen>
   );

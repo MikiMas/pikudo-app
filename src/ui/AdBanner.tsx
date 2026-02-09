@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import type { ComponentType } from "react";
 import { Platform, View } from "react-native";
 
 const TEST_ADMOB_PREFIX = "ca-app-pub-3940256099942544/";
@@ -34,7 +35,7 @@ export function AdBanner() {
     return null;
   }
 
-  let BannerAd: ((props: { unitId: string; size: string }) => JSX.Element) | undefined;
+  let BannerAd: ComponentType<{ unitId: string; size: string }> | undefined;
   let BannerAdSize: { BANNER: string } | undefined;
 
   try {
