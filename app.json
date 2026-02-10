@@ -2,7 +2,7 @@
   "expo": {
     "name": "PIKUDO",
     "slug": "canoo-monorepo",
-    "version": "0.1.3",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/favicon.png",
