@@ -526,6 +526,8 @@ export function RoomScreen({ route, navigation }: { route: any; navigation: any 
           setNextBlockInSec={setNextBlockInSec}
           setState={setState}
           setLeaders={setLeaders}
+          manualRefreshing={refreshing}
+          onManualRefresh={refreshAll}
           onExitHome={handleExitHome}
         />
       ) : null}

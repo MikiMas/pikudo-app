@@ -2,6 +2,7 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import * as ScreenOrientation from "expo-screen-orientation";
+import { ForceUpdateGate } from "./components/ForceUpdateGate";
 import { GlobalErrorModal } from "./components/GlobalErrorModal";
 import { HomeScreen } from "./screens/HomeScreen";
 import { FinalPlayersScreen } from "./screens/FinalPlayersScreen";
@@ -47,6 +48,7 @@ export function App() {
           <Stack.Screen name="FinalChallenges" component={FinalChallengesScreen} options={{ title: "Retos" }} />
         </Stack.Navigator>
         <GlobalErrorModal />
+        <ForceUpdateGate />
       </>
     </NavigationContainer>
   );

@@ -46,6 +46,8 @@ export function GameScreen({
   setNextBlockInSec,
   setState,
   setLeaders,
+  manualRefreshing,
+  onManualRefresh,
   onExitHome
 }: {
   apiBaseUrl: string;
@@ -68,6 +70,8 @@ export function GameScreen({
   setNextBlockInSec: Dispatch<SetStateAction<number>>;
   setState: Dispatch<SetStateAction<RoomState>>;
   setLeaders: Dispatch<SetStateAction<Leader[]>>;
+  manualRefreshing: boolean;
+  onManualRefresh: () => Promise<void>;
   onExitHome: () => Promise<void>;
 }) {
   const completedCount = useMemo(() => challenges.filter((c) => c.completed).length, [challenges]);
@@ -87,7 +91,7 @@ export function GameScreen({
     const minutes = Math.max(0, Math.floor((now - started) / 60000));
     const round = Math.floor(minutes / 30) + 1;
     return Math.min(Math.max(round, 1), Math.max(totalRounds, 1));
-  }, [roomStartsAt, totalRounds]);
+  }, [roomStartsAt, totalRounds, nextBlockInSec]);
 
   const points = useMemo(() => {
     if (!player?.nickname) return player?.points ?? 0;
@@ -475,8 +479,34 @@ export function GameScreen({
       </Card>
 
       <View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
-          <H2>Retos</H2>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <H2>Retos</H2>
+            <Pressable
+              disabled={manualRefreshing}
+              onPress={() => {
+                if (manualRefreshing) return;
+                onManualRefresh().catch(() => {});
+              }}
+              style={({ pressed }) => ({
+                width: 32,
+                height: 32,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: "rgba(140,200,255,0.55)",
+                backgroundColor: pressed ? "rgba(140,200,255,0.26)" : "rgba(140,200,255,0.18)",
+                opacity: manualRefreshing ? 0.6 : 1
+              })}
+            >
+              {manualRefreshing ? (
+                <ActivityIndicator size="small" color={theme.colors.text} />
+              ) : (
+                <Muted style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{"\u21bb"}</Muted>
+              )}
+            </Pressable>
+          </View>
           <Muted>{completedCount} / {challenges.length} completados</Muted>
         </View>
         <View style={{ height: 10 }} />
